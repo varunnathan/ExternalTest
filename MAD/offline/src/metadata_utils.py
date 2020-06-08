@@ -342,18 +342,20 @@ if __name__ == '__main__':
     print('getting metadata...')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('task', choices=["get-num-categories", "get-pdt-mapping",
-                                         "get-brand-pdt-mapping",
-                                         "get-ont-pdt-mapping",
-                                         "get-user-pdt-mapping",
-                                         "get-user-ont-mapping",
-                                         "get-user-brand-mapping"],
+    choices = ["get-num-categories", "get-pdt-mapping", "get-brand-pdt-mapping",
+               "get-ont-pdt-mapping", "get-user-pdt-mapping",
+               "get-user-ont-mapping", "get-user-brand-mapping"]
+    parser.add_argument('task', choices=choices+["all"],
                         help="task to perform")
     args = parser.parse_args()
     TASK = args.task
 
     start = time.time()
-
-    get_metadata()
+    if TASK != 'all':
+        get_metadata(task=TASK)
+    else:
+        for task in choices:
+            print('Task: %s' % (task))
+            get_metadata(task=task)
 
     print('total time taken: %0.2f' % (time.time() - start))

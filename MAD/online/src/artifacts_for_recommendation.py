@@ -480,21 +480,21 @@ if __name__ == '__main__':
     logging.info('artifacts for recommendation')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('task', choices=["get-user-index-mapping-LT20",
-                                         "get-user-index-mapping-GE20",
-                                         "get-user-brand-mapping-LT20",
-                                         "get-user-ont-mapping-LT20",
-                                         "get-ont-pdt-mapping",
-                                         "get-brand-pdt-mapping",
-                                         "get-user-emb-mapping-GE20",
-                                         "get-brand-emb-mapping-GE20",
-                                         "get-latest-epoch-for-user",
-                                         "get-latest-epoch-for-item",
-                                         "get-pdt-mapping",
-                                         "get-user-baseline-feats",
-                                         "get-item-baseline-feats"],
+    choices = ["get-user-index-mapping-LT20", "get-user-index-mapping-GE20",
+               "get-user-brand-mapping-LT20", "get-user-ont-mapping-LT20",
+               "get-ont-pdt-mapping", "get-brand-pdt-mapping",
+               "get-user-emb-mapping-GE20", "get-brand-emb-mapping-GE20",
+               "get-latest-epoch-for-user", "get-latest-epoch-for-item",
+               "get-pdt-mapping", "get-user-baseline-feats",
+               "get-item-baseline-feats"]
+    parser.add_argument('task', choices=choices+["all"],
                         help="task to perform")
     args = parser.parse_args()
     task = args.task
 
-    get_artifacts_for_recommendation(task)
+    if task != "all":
+        get_artifacts_for_recommendation(task)
+    else:
+        for task in choices:
+            print('Task: %s' % (task))
+            get_artifacts_for_recommendation(task)
