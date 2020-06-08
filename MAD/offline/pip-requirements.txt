@@ -252,7 +252,7 @@ tables==3.5.2
 tabulate==0.8.3
 tensorboard==1.13.1
 tensorboardX==1.9
-tensorflow==1.13.1
+tensorflow==1.15.2
 tensorflow-estimator==1.13.0
 tensorflow-metadata==0.14.0
 tensorflow-probability==0.7.0
