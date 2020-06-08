@@ -15,6 +15,7 @@ Folder Structure
 
 To replicate the offline analysis
 ============================================================
+0. Git clone the repo
 1. Create a virtual environment with Python 3.6.5
 2. Install the dependencies in pip-requirements.txt with "pip install -r pip-requirements.txt"
 3. Follow the steps in the makefile to prepare data
