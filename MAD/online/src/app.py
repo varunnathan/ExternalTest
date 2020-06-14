@@ -47,7 +47,7 @@ def main():
     model = Model()
 
     logging.info("Instantiate recommendation class")
-    item_recommendation = Recommendation(model=model, n_candidates=3)
+    item_recommendation = Recommendation(model=model, n_candidates=2)
 
     handlers = [
         (r"/health", HealthHandler),
