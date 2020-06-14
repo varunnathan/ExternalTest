@@ -15,4 +15,5 @@ How to Start
 1. Create a virtual environment with Python 3.8.3
 2. Install the dependencies in pip-requirements.txt with "pip install -r pip-requirements.txt"
 3. Run the artifacts_for_recommendation.py file as "python artifacts_for_recommendation.py all"
-4. Start the app with "python app.py"
+4. Run the moving_data_to_db.py file as "python moving_data_to_db.py all" to move part of the data to redis 
+5. Start the app with "python app.py"
