@@ -1,7 +1,8 @@
-import torch
 import numpy as np
 import os, sys, json, logging
+import redis
 from sklearn.metrics.pairwise import cosine_similarity
+from settings import *
 sys.path.append("../../offline/src/")
 from constants import *
 from baseline_feats_utils import feat_type_feats_dct
@@ -17,6 +18,9 @@ class Recommendation(object):
     def __init__(self, model, n_candidates):
         self.model = model
         self.n_candidates = n_candidates
+
+        logging.info('init redis DB')
+        self.redis_db = redis.StrictRedis(host=DB_HOST, port=DB_PORT, db=DB_NO)
 
         logging.info('read user_num_interactions dct')
         self.num_interactions_dct = json.load(open(USER_NUM_INTERACTIONS_FN))
@@ -43,48 +47,52 @@ class Recommendation(object):
         self.item_baseline_feats3 = json.load(open(
             MAPPED_ITEM_BASELINE_FEATS_3_FN))
 
+        logging.info('read brand2embedding_segGE20 file')
+        self.brand2emb = json.load(open(BRAND2EMB_SEGGE20_FN))
+
     def _get_user_attributes(self, user_id, num_user_interactions):
         """
         returns the model segment and mapped_user_id
         """
-        logging.info("get mapped user_id")
-        if num_user_interactions < 20:
-            user2idx_fn = FINAL_USER2IDX_SEGLT20_FN
-        else:
-            user2idx_fn = FINAL_USER2IDX_SEGGE20_FN
-        user2idx = json.load(open(user2idx_fn))
-        mapped_user_id = user2idx[user_id]
-        del user2idx
-
         segment = 'LT20' if num_user_interactions < 20 else 'GE20'
+        mapped_user_id = int(self.redis_db["user2idx::{}::{}".format(
+            segment, str(user_id))])
 
         return mapped_user_id, segment
 
-    def _get_baseline_feats(self, out_type, mapped_ent_id, clicked_epoch,
-                            segment=None):
+    def _get_user_baseline_feats(self, mapped_user_id, clicked_epoch, segment):
+
+        feats = {}
+        for feat_pos, feat_name in enumerate(feat_type_feats_dct['user']):
+            val = float(self.redis_db.lindex(
+                str(segment)+'::'+str(mapped_user_id), feat_pos))
+            key = 'uuid_'+feat_name
+            if feat_name == 'earliest_interaction_date':
+                key = 'uuid_days_since_earliest_interaction'
+                val = (float(clicked_epoch)-float(val))/(60*60*24)
+                if val < 0:
+                    val = -1
+            feats[key] = val
+
+        return feats
+
+    def _get_item_baseline_feats(self, mapped_item_id, clicked_epoch):
         """
         Input: user/item, clicked_epoch and user_feats_dct/item_feats_dct
         Returns: dictionary of user/item baseline features
         """
         #logging.info('%s features' % (out_type))
-        if out_type == 'user':
-            ent_col = 'uuid'
-            inp_fn = self._find_file_for_baseline_feats_mapping(
-                out_type, mapped_ent_id, segment)
-            logging.info('read file %s' % (inp_fn))
-            ent_feats = json.load(open(inp_fn))
-        elif out_type == 'item':
-            ent_col = 'sourceprodid'
-            if str(mapped_ent_id) in self.item_baseline_feats1:
-                ent_feats = self.item_baseline_feats1
-            elif str(mapped_ent_id) in self.item_baseline_feats2:
-                ent_feats = self.item_baseline_feats2
-            else:
-                ent_feats = self.item_baseline_feats3
+        ent_col = 'sourceprodid'
+        if str(mapped_item_id) in self.item_baseline_feats1:
+            ent_feats = self.item_baseline_feats1
+        elif str(mapped_item_id) in self.item_baseline_feats2:
+            ent_feats = self.item_baseline_feats2
+        else:
+            ent_feats = self.item_baseline_feats3
 
         feats = {}
-        for feat_pos, feat_name in enumerate(feat_type_feats_dct[out_type]):
-            val = ent_feats[str(mapped_ent_id)][feat_pos]
+        for feat_pos, feat_name in enumerate(feat_type_feats_dct['item']):
+            val = ent_feats[str(mapped_item_id)][feat_pos]
             key = ent_col+'_'+feat_name
             if feat_name == 'earliest_interaction_date':
                 key = ent_col+'_days_since_earliest_interaction'
@@ -139,13 +147,13 @@ class Recommendation(object):
         size_per_dct = N_USERS_SEGLT20//4
         u = int(mapped_userid)
         if u <= size_per_dct:
-            return USER_ONT_MAPPING_SEGLT20_1_FN
+            return USER_BRAND_MAPPING_SEGLT20_1_FN
         elif u <= 2*size_per_dct:
-            return USER_ONT_MAPPING_SEGLT20_2_FN
+            return USER_BRAND_MAPPING_SEGLT20_2_FN
         elif u <= 3*size_per_dct:
-            return USER_ONT_MAPPING_SEGLT20_3_FN
+            return USER_BRAND_MAPPING_SEGLT20_3_FN
         else:
-            return USER_ONT_MAPPING_SEGLT20_4_FN
+            return USER_BRAND_MAPPING_SEGLT20_4_FN
 
     def _find_file_for_baseline_feats_mapping(self, out_type, mapped_userid,
                                               segment=None):
@@ -188,18 +196,17 @@ class Recommendation(object):
         """
         returns the candidate brands based on the user's past purchasing patterns
         """
-        logging.info('read user-brand-mapping dct')
-        dct = json.load(open(self._find_file_for_user_brand_mapping(
-            mapped_userid)))
 
         logging.info('candidate selection process begins')
         candidates = []
         count = 0
         for k in ['buy', 'addToCart', 'pageView']:
-            if str(mapped_userid) in dct[k]:
-                candidate = dct[k][str(mapped_userid)]
-                count += len(candidate)
-                candidates += candidate
+            db_k = "brand::LT20::{}::{}".format(k, str(mapped_userid))
+            candidate = self.redis_db.lrange(db_k, 0, -1)
+            if candidate:
+                candidate = [int(x) for x in candidate]
+            count += len(candidate)
+            candidates += candidate
             if count >= self.n_candidates:
                 candidates = candidates[:self.n_candidates]
                 break
@@ -227,12 +234,9 @@ class Recommendation(object):
                                                   mapped_userid)
         user_embedding = np.array(user_embedding).reshape((1, len(user_embedding)))
 
-        logging.info('read brand2embedding_segGE20 file')
-        brand2emb = json.load(open(BRAND2EMB_SEGGE20_FN))
-
         logging.info('candidate selection process begins')
-        keys = list(brand2emb.keys())
-        embs = np.array(list(brand2emb.values()))
+        keys = list(self.brand2emb.keys())
+        embs = np.array(list(self.brand2emb.values()))
         sims = cosine_similarity(user_embedding, embs)
         sims = sims.reshape(sims.shape[1])
         candidates = sims.argsort()[::-1][:self.n_candidates]
@@ -274,12 +278,8 @@ class Recommendation(object):
         logging.info('num candidate_brands: %d' % (len(candidate_brands)))
 
         logging.info('get clicked_epoch for user')
-        fn = self._find_file_for_epoch_mapping(
-            ent='user', mapped_ent_id=self.mapped_user_id, segment=self.segment)
-        logging.info('epoch fn: %s' % (fn))
-        epoch_dct = json.load(open(fn))
-        user_clicked_epoch = epoch_dct[str(self.mapped_user_id)]
-        del epoch_dct
+        user_clicked_epoch = int(self.redis_db.get("epoch::{}::{}".format(
+            str(self.segment), str(self.mapped_user_id))))
 
         logging.info('get item_id, ontology and price for the candidate brands')
         cat_lst, prices = self._item_ids_from_brands(candidate_brands)
@@ -304,17 +304,16 @@ class Recommendation(object):
         numeric_feats = []
 
         logging.info('get user baseline features')
-        feats = self._get_baseline_feats(
-            out_type='user', mapped_ent_id=self.mapped_user_id,
+        feats = self._get_user_baseline_feats(
+            mapped_user_id=self.mapped_user_id,
             clicked_epoch=user_clicked_epoch, segment=self.segment)
 
         logging.info('get item baseline features')
         for i, item_clicked_epoch in enumerate(item_clicked_epochs):
             if i % 10 == 0:
                 logging.info('num completed: %d' % (i))
-            feats.update(self._get_baseline_feats(
-                out_type='item', mapped_ent_id=cat_lst[i][0],
-                clicked_epoch=item_clicked_epoch, segment=None))
+            feats.update(self._get_item_baseline_feats(
+                mapped_item_id=cat_lst[i][0], clicked_epoch=item_clicked_epoch))
 
             numeric_feat = [prices[i]] + [feats[col] for col in NUMERIC_FEATS[1:]]
             numeric_feats.append(numeric_feat)
