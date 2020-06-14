@@ -1,5 +1,5 @@
 """
-Use the last 7 part files (starting with 0005) as the test set
+Use the last 8 part files (starting with 0005) as the test set
 """
 import pandas as pd
 import numpy as np
