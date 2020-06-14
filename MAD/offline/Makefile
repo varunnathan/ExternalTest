@@ -7,10 +7,10 @@ help:
 	@echo "        Prepares the data for model training"
 
 metadata:
-	python metadata_utils all
+	python src/metadata_utils all
 
 baseline-features:
-	python baseline_feats_utils
+	python src/baseline_feats_utils
 
 data-preparation:
-	python data_preparation
+	python src/data_preparation
