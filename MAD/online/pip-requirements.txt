@@ -19,9 +19,6 @@ joblib==0.15.1
 kiwisolver==1.2.0
 MarkupSafe==1.1.1
 matplotlib==3.2.1
-mkl-fft==1.0.15
-mkl-random==1.1.1
-mkl-service==2.3.0
 numpy==1.18.1
 olefile==0.46
 pandas==1.0.4
@@ -40,6 +37,7 @@ PySocks==1.7.1
 python-dateutil==2.8.1
 pytz==2020.1
 requests==2.23.0
+redis==3.5.3
 scikit-learn==0.23.1
 scipy==1.4.1
 six==1.14.0
@@ -48,7 +46,7 @@ torch==1.5.0
 torch-model-archiver==0.1.0b20200409
 torchserve==0.0.1b20200409
 torchtext==0.6.0
-torchvision==0.6.0a0+82fd1c8
+torchvision
 tornado==6.0.4
 tqdm==4.46.0
 traitlets==4.3.3

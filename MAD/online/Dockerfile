@@ -1,4 +1,4 @@
-FROM python:3.8.3-stretch as base
+FROM python:3.8.3 as base
 COPY ./pip-requirements.txt /recommend/
 WORKDIR "/recommend"
 RUN pip install -r pip-requirements.txt
