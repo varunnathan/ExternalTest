@@ -148,7 +148,7 @@ nbconvert==5.6.0
 nbformat==4.4.0
 networkx==2.2
 newrelic==4.18.0.118
-notebook==6.0.1
+notebook==6.1.5
 numexpr==2.6.9
 numpy==1.17.0
 nvidia-ml-py3==7.352.0
