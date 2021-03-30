@@ -179,7 +179,7 @@ pycparser==2.19
 pycryptodome==3.8.0
 pydantic==1.5.1
 pydot==1.4.1
-Pygments==2.4.2
+Pygments==2.7.4
 pygraphviz==1.5
 PyHamcrest==1.9.0
 PyJWT==1.7.1
