@@ -126,7 +126,7 @@ lifelines==0.21.0
 lightfm==1.15
 lightgbm==2.3.1
 lineflow==0.6.4
-lxml==4.3.4
+lxml==4.6.3
 Markdown==3.0.1
 MarkupSafe==1.1.1
 marshmallow==2.19.2
