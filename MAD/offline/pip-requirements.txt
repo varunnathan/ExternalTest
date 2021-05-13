@@ -177,7 +177,7 @@ pyasn1-modules==0.2.4
 pybind11==2.3.0
 pycparser==2.19
 pycryptodome==3.8.0
-pydantic==1.5.1
+pydantic==1.6.2
 pydot==1.4.1
 Pygments==2.4.2
 pygraphviz==1.5
