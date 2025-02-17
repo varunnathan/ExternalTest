@@ -29,7 +29,7 @@ class ItemPVDataset(Dataset):
         else:
             self._data = self.collect_test_samples(self.global_data, self.prod_data, args.candi_batch_size)
 
-    def collect_test_samples(self, global_data, prod_data, candi_batch_size=1000):
+    def collect_test_samples(self, global_data, prod_data, candi_batch_size=1000, max_global_data_pdt_size=5000):
         #Q, review of u + review of pos i, review of u + review of neg i;
         #words of pos reviews; words of neg reviews, all if encoder is not pv
         test_data = []
@@ -53,7 +53,11 @@ class ItemPVDataset(Dataset):
                         candidate_items.append(prod_idx)
                         random.shuffle(candidate_items)
                     else:
-                        candidate_items = list(range(global_data.product_size))
+                        if global_data.product_size > max_global_data_pdt_size:
+                            global_data_pdt_size = max_global_data_pdt_size
+                        else:
+                            global_data_pdt_size = global_data.product_size
+                        candidate_items = list(range(global_data_pdt_size))
                 else:
                     candidate_items = prod_data.uq_pids[(global_data.user_ids[user_idx], query_idx)]
                     random.shuffle(candidate_items)

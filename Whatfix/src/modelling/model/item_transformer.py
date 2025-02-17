@@ -105,9 +105,9 @@ class ItemTransformerRanker(nn.Module):
         candi_item_seq_mask = torch.cat([column_mask, u_item_mask], dim=2)
         candi_item_emb = self.product_emb(candi_prod_idxs) #batch_size, candi_k, embedding_size
         if self.args.sep_prod_emb:
-            u_item_emb = self.hist_product_emb(u_item_idxs)
+            u_item_emb = self.hist_product_emb(u_item_idxs.long())
         else:
-            u_item_emb = self.product_emb(u_item_idxs)
+            u_item_emb = self.product_emb(u_item_idxs.long())
         candi_sequence_emb = torch.cat(
                 [query_emb.unsqueeze(1).expand(-1, candi_k, -1).unsqueeze(2),
                     u_item_emb.unsqueeze(1).expand(-1, candi_k, -1, -1)],

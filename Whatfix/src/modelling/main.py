@@ -162,14 +162,20 @@ def create_model(args, global_data, prod_data, load_path=''):
     #if load_path != '':
         logger.info('Loading checkpoint from %s' % load_path)
         checkpoint = torch.load(load_path,
-                                map_location=lambda storage, loc: storage)
+                                map_location=lambda storage, loc: storage,
+                                weights_only=False)
+        logger.info('Checkpoint loaded successfully!')
         opt = vars(checkpoint['opt'])
         for k in opt.keys():
             if (k in model_flags):
                 setattr(args, k, opt[k])
         args.start_epoch = checkpoint['epoch']
+        logger.info('Loading checkpoint into instantiated model class')
         model.load_cp(checkpoint)
+        logger.info('Checkpoint successfully loaded into instantiated model class')
+        logger.info('build_optim starting...')
         optim = build_optim(args, model, checkpoint)
+        logger.info('build_optim completed successfully!')
     else:
         logger.info('No available model to load. Build new model.')
         optim = build_optim(args, model, None)
@@ -231,8 +237,12 @@ def get_product_scores(args):
     test_prod_data = ProdSearchData(args, args.input_train_dir, "test", global_data)
     model_path = os.path.join(args.save_dir, 'model_best.ckpt')
     best_model, _ = create_model(args, global_data, test_prod_data, model_path)
+    logger.info('Init Trainer class with model checkpoint')
     trainer = Trainer(args, best_model, None)
+    logger.info('Trainer class successfully instantiated with model checkpoint')
+    logger.info('Testing begins...')
     trainer.test(args, global_data, test_prod_data, args.rankfname)
+    logger.info('Testing completed successfully!')
 
 
 def main(args):

@@ -74,7 +74,7 @@ class Trainer(object):
                 for batch_data in batch_data_arr:
                     get_batch_time += time.time() - time_flag
                     time_flag = time.time()
-                    step_loss = self.model(batch_data, train_pv=prepare_pv)
+                    step_loss = self.model(batch_data)
                     #self.optim.optimizer.zero_grad()
                     self.model.zero_grad()
                     step_loss.backward()
@@ -133,7 +133,7 @@ class Trainer(object):
         dataloader = self.ExpDataloader(
                 args, valid_dataset, batch_size=args.valid_batch_size,
                 shuffle=False, num_workers=args.num_workers)
-        all_prod_idxs, all_prod_scores, all_target_idxs = self.get_prod_scores(
+        all_prod_idxs, all_prod_scores, all_target_idxs, _, _ = self.get_prod_scores(
             args, dataloader, "Validation", candidate_size)
         sorted_prod_idxs = all_prod_scores.argsort(axis=-1)[:,::-1] #by default axis=-1, along the last axis
         mrr, prec = self.calc_metrics(all_prod_idxs, sorted_prod_idxs, all_target_idxs, candidate_size, cutoff=100)
@@ -143,15 +143,24 @@ class Trainer(object):
         candidate_size = args.test_candi_size
         if args.test_candi_size < 1:
             candidate_size = global_data.product_size
+        logger.info("Creating test_dataset...")
         test_dataset = self.ExpDataset(args, global_data, test_prod_data)
+        logger.info("test_dataset created successfully!")
+
+        logger.info("creating dataloader...")
         dataloader = self.ExpDataloader(
                 args, test_dataset, batch_size=args.valid_batch_size, #batch_size
                 shuffle=False, num_workers=args.num_workers)
+        logger.info("dataloader created successfully!")
 
+        logger.info("inference begins...")
         all_prod_idxs, all_prod_scores, all_target_idxs, \
                 all_query_idxs, all_user_idxs \
                 = self.get_prod_scores(args, dataloader, "Test", candidate_size)
+        logger.info("inference completed successfully!")
         sorted_prod_idxs = all_prod_scores.argsort(axis=-1)[:,::-1] #by default axis=-1, along the last axis
+        
+        logger.info("Metric calculation begins...")
         mrr, prec = self.calc_metrics(all_prod_idxs, sorted_prod_idxs, all_target_idxs, candidate_size, cutoff)
         logger.info("Test: MRR:{} P@1:{}".format(mrr, prec))
         output_path = os.path.join(args.save_dir, rankfname)
