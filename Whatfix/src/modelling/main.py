@@ -41,9 +41,9 @@ def parse_args():
                         help="during test time if only training data is available, use the most recent iprev and uprev \
                         reviews; if train_review_only is False, use all the sequential reviews available before \
                         current review, including validation and test.")
-    parser.add_argument("--fix_emb", type=str2bool, nargs='?',const=True, default=False,
+    parser.add_argument("--fix_emb", type=str2bool, nargs='?', const=True, default=False,
                         help="fix word embeddings or review embeddings during training.")
-    parser.add_argument("--use_dot_prod", type=str2bool, nargs='?',const=True, default=True,
+    parser.add_argument("--use_dot_prod", type=str2bool, nargs='?', const=True, default=True,
                         help="use positional embeddings when encoding reviews.")
     parser.add_argument("--sim_func", type=str, default="product",
                         choices=["bias_product", "product", "cosine"],
@@ -64,9 +64,9 @@ def parse_args():
     parser.add_argument("--token_dropout", default=0.1, type=float)
     parser.add_argument("--optim", type=str, default="adam", help="sgd or adam")
     parser.add_argument("--lr", default=0.002, type=float)
-    parser.add_argument("--beta1", default= 0.9, type=float)
+    parser.add_argument("--beta1", default=0.9, type=float)
     parser.add_argument("--beta2", default=0.999, type=float)
-    parser.add_argument("--decay_method", default='adam', choices=['noam', 'adam'],type=str) #warmup learning rate then decay
+    parser.add_argument("--decay_method", default='adam', choices=['noam', 'adam'], type=str) #warmup learning rate then decay
     parser.add_argument("--warmup_steps", default=8000, type=int)
     parser.add_argument("--max_grad_norm", type=float, default=5.0,
                         help="Clip gradients to this norm.")
@@ -149,7 +149,7 @@ model_flags = ['embedding_size', 'ff_size', 'heads', 'inter_layers','review_enco
 
 
 def create_model(args, global_data, prod_data, load_path=''):
-    """Create translation model and initialize or load parameters in session."""
+    """Create model and initialize or load parameters in session."""
     if args.model_name == "review_transformer":
         model = ProductRanker(args, args.device, global_data.vocab_size,
                 global_data.review_count, global_data.product_size, global_data.user_size,
@@ -159,20 +159,22 @@ def create_model(args, global_data, prod_data, load_path=''):
                 global_data.product_size, global_data.words, word_dists=prod_data.word_dists)
 
     if os.path.exists(load_path):
-    #if load_path != '':
         logger.info('Loading checkpoint from %s' % load_path)
         checkpoint = torch.load(load_path,
                                 map_location=lambda storage, loc: storage,
                                 weights_only=False)
         logger.info('Checkpoint loaded successfully!')
+        
         opt = vars(checkpoint['opt'])
         for k in opt.keys():
             if (k in model_flags):
                 setattr(args, k, opt[k])
         args.start_epoch = checkpoint['epoch']
+        
         logger.info('Loading checkpoint into instantiated model class')
         model.load_cp(checkpoint)
         logger.info('Checkpoint successfully loaded into instantiated model class')
+        
         logger.info('build_optim starting...')
         optim = build_optim(args, model, checkpoint)
         logger.info('build_optim completed successfully!')
@@ -195,7 +197,7 @@ def train(args):
 
     global_data = GlobalProdSearchData(args, args.data_dir, args.input_train_dir)
     train_prod_data = ProdSearchData(args, args.input_train_dir, "train", global_data)
-    #subsampling has been done in train_prod_data
+
     model, optim = create_model(args, global_data, train_prod_data, args.train_from)
     trainer = Trainer(args, model, optim)
     valid_prod_data = ProdSearchData(args, args.input_train_dir, "valid", global_data)
@@ -204,6 +206,7 @@ def train(args):
     best_model, _ = create_model(args, global_data, train_prod_data, best_checkpoint_path)
     del trainer
     torch.cuda.empty_cache()
+    
     trainer = Trainer(args, best_model, None)
     trainer.test(args, global_data, test_prod_data, args.rankfname)
 
@@ -212,11 +215,9 @@ def validate(args):
     cp_files = sorted(glob.glob(os.path.join(args.save_dir, 'model_epoch_*.ckpt')))
     global_data = GlobalProdSearchData(args, args.data_dir, args.input_train_dir)
     valid_prod_data = ProdSearchData(args, args.input_train_dir, "valid", global_data)
-    #valid_prod_data = ProdSearchData(args, args.input_train_dir, "test", global_data)
     valid_dataset = ProdSearchDataset(args, global_data, valid_prod_data)
     best_mrr, best_model = 0, None
     for cur_model_file in cp_files:
-        #logger.info("Loading {}".format(cur_model_file))
         cur_model, _ = create_model(args, global_data, valid_prod_data, cur_model_file)
         trainer = Trainer(args, cur_model, None)
         mrr, prec = trainer.validate(args, global_data, valid_dataset)
@@ -237,9 +238,11 @@ def get_product_scores(args):
     test_prod_data = ProdSearchData(args, args.input_train_dir, "test", global_data)
     model_path = os.path.join(args.save_dir, 'model_best.ckpt')
     best_model, _ = create_model(args, global_data, test_prod_data, model_path)
+    
     logger.info('Init Trainer class with model checkpoint')
     trainer = Trainer(args, best_model, None)
     logger.info('Trainer class successfully instantiated with model checkpoint')
+    
     logger.info('Testing begins...')
     trainer.test(args, global_data, test_prod_data, args.rankfname)
     logger.info('Testing completed successfully!')
