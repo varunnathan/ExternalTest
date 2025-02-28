@@ -264,7 +264,7 @@ twilio==6.25.2
 typing==3.6.2
 typing-extensions==3.7.4
 tzlocal==1.5.1
-ujson==1.35
+ujson==5.4.0
 uritemplate==3.0.0
 urllib3==1.25.9
 virtualenv==16.7.3
