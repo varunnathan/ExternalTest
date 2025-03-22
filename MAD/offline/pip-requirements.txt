@@ -150,7 +150,7 @@ networkx==2.2
 newrelic==4.18.0.118
 notebook==6.0.1
 numexpr==2.6.9
-numpy==1.17.0
+numpy==1.22.0
 nvidia-ml-py3==7.352.0
 packaging==18.0
 pandas==0.25.3
