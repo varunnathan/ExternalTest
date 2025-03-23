@@ -64,7 +64,7 @@ fbmessenger==5.4.0
 filelock==3.0.12
 flair==0.4.3
 Flask==1.0.2
-Flask-Cors==3.0.7
+Flask-Cors==3.0.9
 Flask-JWT-Simple==0.0.3
 flask-request-logger==0.3.1
 Flask-SocketIO==3.3.2
