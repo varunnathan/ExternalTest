@@ -199,7 +199,7 @@ python-telegram-bot==11.1.0
 pytorch-lamb==1.0.0
 pytorch-transformers==1.2.0
 pytz==2018.9
-PyYAML==5.3.1
+PyYAML==5.4
 pyzmq==18.1.0
 qtconsole==4.5.4
 questionary==1.0.2
