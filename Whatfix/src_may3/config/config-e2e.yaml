@@ -1,0 +1,42 @@
+base_model_config:
+  model_name: bert-base-cased
+  max_seq_len: 128
+  ctx_dim:
+    intent_prediction: 2
+    categorical_slot_prediction: 4
+    free_form_slot_prediction: 4
+    requested_slot_prediction: 4
+    in_domain_slot_prediction: 16
+    cross_domain_slot_prediction: 32
+
+data_config:
+  data_dir_prefix:
+    intent_prediction: intent_{}
+    categorical_slot_prediction: cat_slot_{}
+    free_form_slot_prediction: ff_slot_{}
+    requested_slot_prediction: req_slot_{}
+    in_domain_slot_prediction: in_dom_slot_{}
+    cross_domain_slot_prediction: cross_dom_slot_{}
+  special_tokens:
+    sys: "[SYS]"
+    usr: "[USR]"
+    cls: "[CLS]"
+    sep: "[SEP]"
+  max_num_values_cat_slot: 12
+
+training_config:
+  output_dir:
+    intent_prediction: ckpt_intent
+    categorical_slot_prediction: ckpt_cat_slot
+    free_form_slot_prediction: ckpt_ff_slot
+    requested_slot_prediction: ckpt_req_slot
+    in_domain_slot_prediction: ckpt_in_dom_slot
+    cross_domain_slot_prediction: ckpt_cross_dom_slot
+  eval_strategy: epoch
+  save_strategy: epoch
+  logging_steps: 50
+  learning_rate: 2e-05
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  seed: 101
+  max_n_epochs: 1
