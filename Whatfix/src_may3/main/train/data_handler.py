@@ -301,8 +301,8 @@ class DataHandler:
         """
         examples = []
         last_sys_utt   = ""
-        last_offered   = {}          # slot → latest offered value
-        prev_user_state = {}         # service → slot_values dict
+        last_offered   = {}          # slot -> latest offered value
+        prev_user_state = {}         # service -> slot_values dict
 
         for turn in dlg.get("turns", []):
             spk = turn["speaker"]
@@ -373,14 +373,14 @@ class DataHandler:
     
     def _build_xfer_cross_examples(self, dlg: Dict[str, Any]):
         examples = []
-        svc_state_hist = {}     # service → latest slot_values
+        svc_state_hist = {}     # service -> latest slot_values
         prev_turn_svcs = set()  # services that appeared in *any* previous turn
 
         for turn in dlg.get("turns", []):
             cur_svcs = {fr["service"] for fr in turn.get("frames", [])}
 
             # --------------------------------------------------------------------
-            # USER turn → create training examples
+            # USER turn -> create training examples
             # --------------------------------------------------------------------
             if turn["speaker"] == "USER":
                 utter = turn["utterance"]

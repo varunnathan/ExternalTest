@@ -4,7 +4,7 @@ Usage
 """
 
 import argparse, glob, json, sys
-from src_may3.main.evaluate.metrics import compare_slot_values
+from main.evaluate.metrics import compare_slot_values
 
 
 # ---------- util -----------------------------------------------------------
