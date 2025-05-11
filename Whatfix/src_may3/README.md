@@ -8,7 +8,7 @@
 2. Create a virtual environment => `python -m venv /py3128_external_test`
 3. Install the requirements in the virtual environment => `pip install -r requirements.txt`
 4. To train models: From the root folder of the project run the following command
-    > `PYTHONPATH=./ python main/startup.py --module cross_domain_slot_prediction`
+    > `PYTHONPATH=./ python main/startup.py --module cross_domain_slot_prediction --train`
 5. To get predictions from individual models: From the root folder of the project run the following command
     > `PYTHONPATH=./ python main/startup.py --module cross_domain_slot_prediction --predict`
 6. To run inference on the test set: From the root folder of the project run the following command
