@@ -17,39 +17,73 @@ class DataHandler:
         self.schemas = self._load_schema_map(module=ModuleType.CAT_SLOT)
 
     def prepare_data(self, splits: List[Tuple[str, str]] = [("train", "train"), ("dev", "validation")],
-                     module: ModuleType = ModuleType.INTENT):
+                     module: ModuleType = ModuleType.INTENT, is_train: bool = True,
+                     test_split_tag: str = "test"):
         out_dir = self.path_config.PREPARED_DATA_DIR
         data_dir_prefix = self.data_config.data_dir_prefix[module]
         
-        if os.path.isdir(os.path.join(str(out_dir), data_dir_prefix.format("train"))):
-            log("Data preparation has already been done. Exiting!")
+        if is_train:
+            log("Data preparation for Training")
+            log("-" * 100)
+            if os.path.isdir(os.path.join(str(out_dir), data_dir_prefix.format("train"))):
+                log("Data preparation has already been done. Exiting!")
+            else:
+                log("Create data_dct for all splits")
+                ds = {}
+                for raw_split, save_split in splits:
+                    ds[save_split] = self._load_sgd_flat(raw_split, module)
+                ds = DatasetDict(ds)
+                
+                for save_split in ds:
+                    if module == ModuleType.INTENT:
+                        packed = ds[save_split].map(self._pack_intents, remove_columns=ds[save_split].column_names)
+                    elif module == ModuleType.CAT_SLOT:
+                        packed = ds[save_split].map(lambda ex: self._pack_cat_slot(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    elif module == ModuleType.FREE_SLOT:
+                        packed = ds[save_split].map(lambda ex: self._pack_free_slot(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    elif module == ModuleType.REQUESTED_SLOT:
+                        packed = ds[save_split].map(lambda ex: self._pack_req_slot(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    elif module == ModuleType.IN_DOMAIN_SLOT:
+                        packed = ds[save_split].map(lambda ex: self._pack_xfer_in(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    else:
+                        packed = ds[save_split].map(lambda ex: self._pack_xfer_cross(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    packed.save_to_disk(out_dir / data_dir_prefix.format(save_split))
+                    log(f"Saved {len(packed)} packed {save_split} examples")
         else:
-            log("Create data_dct for all splits")
-            ds = {}
-            for raw_split, save_split in splits:
-                ds[save_split] = self._load_sgd_flat(raw_split, module)
-            ds = DatasetDict(ds)
-            
-            for save_split in ds:
-                if module == ModuleType.INTENT:
-                    packed = ds[save_split].map(self._pack_intents, remove_columns=ds[save_split].column_names)
-                elif module == ModuleType.CAT_SLOT:
-                    packed = ds[save_split].map(lambda ex: self._pack_cat_slot(ex),
-                                                remove_columns=ds[save_split].column_names)
-                elif module == ModuleType.FREE_SLOT:
-                    packed = ds[save_split].map(lambda ex: self._pack_free_slot(ex),
-                                                remove_columns=ds[save_split].column_names)
-                elif module == ModuleType.REQUESTED_SLOT:
-                    packed = ds[save_split].map(lambda ex: self._pack_req_slot(ex),
-                                                remove_columns=ds[save_split].column_names)
-                elif module == ModuleType.IN_DOMAIN_SLOT:
-                    packed = ds[save_split].map(lambda ex: self._pack_xfer_in(ex),
-                                                remove_columns=ds[save_split].column_names)
-                else:
-                    packed = ds[save_split].map(lambda ex: self._pack_xfer_cross(ex),
-                                                remove_columns=ds[save_split].column_names)
-                packed.save_to_disk(out_dir / data_dir_prefix.format(save_split))
-                log(f"Saved {len(packed)} packed {save_split} examples")
+            log("Data preparation for Inference")
+            log("-" * 100)
+            if os.path.isdir(os.path.join(str(out_dir), data_dir_prefix.format(test_split_tag))):
+                log("Data preparation has already been done. Exiting!")
+            else:
+                ds = {}
+                ds[test_split_tag] = self._load_sgd_flat(test_split_tag, module)
+                ds = DatasetDict(ds)
+
+                for save_split in ds:
+                    if module == ModuleType.INTENT:
+                        packed = ds[save_split].map(self._pack_intents, remove_columns=ds[save_split].column_names)
+                    elif module == ModuleType.CAT_SLOT:
+                        packed = ds[save_split].map(lambda ex: self._pack_cat_slot(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    elif module == ModuleType.FREE_SLOT:
+                        packed = ds[save_split].map(lambda ex: self._pack_free_slot(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    elif module == ModuleType.REQUESTED_SLOT:
+                        packed = ds[save_split].map(lambda ex: self._pack_req_slot(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    elif module == ModuleType.IN_DOMAIN_SLOT:
+                        packed = ds[save_split].map(lambda ex: self._pack_xfer_in(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    else:
+                        packed = ds[save_split].map(lambda ex: self._pack_xfer_cross(ex),
+                                                    remove_columns=ds[save_split].column_names)
+                    packed.save_to_disk(out_dir / data_dir_prefix.format(save_split))
+                    log(f"Saved {len(packed)} packed {save_split} examples")
 
     def _load_sgd_flat(self, split: str, module: ModuleType) -> Dataset:
         """Return a Dataset of flattened USER turns for the given split."""
@@ -107,8 +141,9 @@ class DataHandler:
         if "turns" not in dlg:
             return []
 
+        dlg_id = dlg["dialogue_id"]
         history, prev_intent = [], "NONE"
-        for t in dlg["turns"]:
+        for turn_idx, t in enumerate(dlg["turns"]):
             spk, utt = t.get("speaker", ""), t.get("utterance", "")
             if spk == "USER":
                 sys_utt = next((u for s, u in reversed(history) if s == "SYSTEM"), "")
@@ -118,6 +153,8 @@ class DataHandler:
                 frame = t["frames"][0] # considering only the first frame
                 state = frame.get("state", {})
                 yield {
+                    "dlg_id":   dlg_id,
+                    "turn_idx": turn_idx,
                     "service": frame.get("service", ""),
                     "sys_utt": sys_utt,
                     "user_utt": utt,
@@ -131,9 +168,10 @@ class DataHandler:
         if "turns" not in dlg:
             return []
 
+        dlg_id = dlg["dialogue_id"]
         examples = []
         last_sys_actions = []
-        for turn in dlg["turns"]:
+        for turn_idx, turn in enumerate(dlg["turns"]):
             speaker = turn["speaker"]
 
             # ---------- SYSTEM turn: remember its actions for the next user turn
@@ -173,6 +211,8 @@ class DataHandler:
                     ctx_feat  = 2 * int(slot in requested) + int(slot in offered)
 
                     examples.append({
+                        "dlg_id":   dlg_id,
+                        "turn_idx": turn_idx,
                         "utterance": utter,
                         "slot_desc": f"{slot}: {sl['description']}",
                         "values":    values,
@@ -189,9 +229,10 @@ class DataHandler:
         if "turns" not in dlg:
             return []
 
+        dlg_id = dlg["dialogue_id"]
         examples, last_sys_actions = [], []
         last_sys_utt = ""
-        for turn in dlg["turns"]:
+        for turn_idx, turn in enumerate(dlg["turns"]):
             spk = turn["speaker"]
 
             # remember most recent SYSTEM actions
@@ -244,6 +285,8 @@ class DataHandler:
                         tok_start = tok_end = len(utter_ids["input_ids"])      # null
 
                     examples.append({
+                        "dlg_id":   dlg_id,
+                        "turn_idx": turn_idx,
                         "utterance": utter,
                         "slot_desc": f"{slot}: {sl['description']}",
                         "ctx_feat":  ctx_feat,
@@ -257,8 +300,9 @@ class DataHandler:
         if "turns" not in dlg:
             return []
 
+        dlg_id = dlg["dialogue_id"]
         examples, last_sys_actions, last_sys_utt = [], [], ""
-        for turn in dlg.get("turns", []):
+        for turn_idx, turn in enumerate(dlg.get("turns", [])):
             spk = turn["speaker"]
 
             # remember system context
@@ -287,6 +331,8 @@ class DataHandler:
                     slot = sl["name"]
                     ctx_feat = 2 * int(slot in requested) + int(slot in offered)
                     examples.append({
+                        "dlg_id":   dlg_id,
+                        "turn_idx": turn_idx,
                         "utterance": utter,
                         "slot_desc": f"{slot}: {sl['description']}",
                         "ctx_feat":  ctx_feat,
@@ -299,12 +345,16 @@ class DataHandler:
         In-domain slot-transfer examples per USER turn.
         label = 1  <=>  (slot offered earlier OR in previous state) AND not overwritten now
         """
+        if "dialogue_id" not in dlg:
+            return []
+
+        dlg_id = dlg["dialogue_id"]
         examples = []
         last_sys_utt   = ""
         last_offered   = {}          # slot -> latest offered value
         prev_user_state = {}         # service -> slot_values dict
 
-        for turn in dlg.get("turns", []):
+        for turn_idx, turn in enumerate(dlg.get("turns", [])):
             spk = turn["speaker"]
 
             # ----- SYSTEM turn: update memory of offers & system utterance -------
@@ -359,6 +409,8 @@ class DataHandler:
                     label = int((cond_offer or cond_hist) and not_over)
 
                     examples.append({
+                        "dlg_id":   dlg_id,
+                        "turn_idx": turn_idx,
                         "utterance":   utter,
                         "service_desc": schema["description"],
                         "slot_desc":   f"{slot}: {sl['description']}",
@@ -372,11 +424,15 @@ class DataHandler:
         return examples
     
     def _build_xfer_cross_examples(self, dlg: Dict[str, Any]):
+        if "dialogue_id" not in dlg:
+            return []
+
+        dlg_id = dlg["dialogue_id"]
         examples = []
         svc_state_hist = {}     # service -> latest slot_values
         prev_turn_svcs = set()  # services that appeared in *any* previous turn
 
-        for turn in dlg.get("turns", []):
+        for turn_idx, turn in enumerate(dlg.get("turns", [])):
             cur_svcs = {fr["service"] for fr in turn.get("frames", [])}
 
             # --------------------------------------------------------------------
@@ -426,6 +482,8 @@ class DataHandler:
                             label = int((not has_now) and src_val not in ('', None))
 
                             examples.append({
+                                'dlg_id':   dlg_id,
+                                'turn_idx': turn_idx,
                                 'utterance':   utter,
                                 'target_slot': tgt_desc,
                                 'source_slot': src_desc,
@@ -490,6 +548,8 @@ class DataHandler:
         intent_mask = [1] * len(intents) + [0] * (32 - len(intents))  # 32 = max intents per service in SGD
         
         return {
+            "dlg_id": ex["dlg_id"],
+            "turn_idx": ex["turn_idx"],
             "input_ids": input_ids,
             "token_type_ids": seg,
             "context_ids": ctx,
@@ -531,12 +591,16 @@ class DataHandler:
             att[s: e, slot_sl] = 1
             att[s: e, s: e] = 1
 
-        return {"input_ids": seq,
-                "token_type_ids": seg,
-                "context_ids": ctx,
-                "attention_mask": att,
-                "val_spans": val_spans,
-                "labels": ex["label"]}
+        return {
+            "dlg_id": ex["dlg_id"],
+            "turn_idx": ex["turn_idx"],
+            "input_ids": seq,
+            "token_type_ids": seg,
+            "context_ids": ctx,
+            "attention_mask": att,
+            "val_spans": val_spans,
+            "labels": ex["label"]
+        }
 
     def _pack_free_slot(self, ex):
         ids_utt  = self.tok(ex["utterance"], add_special_tokens=False)["input_ids"]
@@ -556,12 +620,16 @@ class DataHandler:
         start = min(1 + ex["start"], self.model_config.max_seq_len - 1) if ex["start"] != -1 else null_idx + 1
         end   = min(1 + ex["end"],   self.model_config.max_seq_len - 1) if ex["end"] != -1 else null_idx + 1
 
-        return {"input_ids": seq,
-                "token_type_ids": seg,
-                "context_ids": ctx,
-                "attention_mask": [1] * len(seq),  # standard mask
-                "start_positions": start,
-                "end_positions":   end}
+        return {
+            "dlg_id": ex["dlg_id"],
+            "turn_idx": ex["turn_idx"],
+            "input_ids": seq,
+            "token_type_ids": seg,
+            "context_ids": ctx,
+            "attention_mask": [1] * len(seq),
+            "start_positions": start,
+            "end_positions":   end
+        }
 
     def _pack_req_slot(self, ex):
         ids_utt  = self.tok(ex["utterance"], add_special_tokens=False)["input_ids"]
@@ -575,11 +643,15 @@ class DataHandler:
         seg = [0] * (len(ids_utt) + 2) + [1] * (len(seq) - len(ids_utt) - 2)
         ctx = [ex["ctx_feat"]] * len(seq)
 
-        return {"input_ids": seq,
-                "token_type_ids": seg,
-                "context_ids": ctx,
-                "attention_mask": [1] * len(seq),
-                "labels": ex["label"]}
+        return {
+            "dlg_id": ex["dlg_id"],
+            "turn_idx": ex["turn_idx"],
+            "input_ids": seq,
+            "token_type_ids": seg,
+            "context_ids": ctx,
+            "attention_mask": [1] * len(seq),
+            "labels": ex["label"]
+        }
     
     def _pack_xfer_in(self, ex):
         ids_srv  = self.tok(ex["service_desc"], add_special_tokens=False)["input_ids"]
@@ -594,11 +666,15 @@ class DataHandler:
         seg = [0] * (len(ids_srv) + len(ids_utt) + 3) + [1] * (len(ids_slot) + 1)
         ctx = [ex["ctx_feat"]] * len(seq)
 
-        return {"input_ids": seq,
-                "token_type_ids": seg,
-                "context_ids": ctx,
-                "attention_mask": [1] * len(seq),
-                "labels": ex["labels"]}
+        return {
+            "dlg_id": ex["dlg_id"],
+            "turn_idx": ex["turn_idx"],
+            "input_ids": seq,
+            "token_type_ids": seg,
+            "context_ids": ctx,
+            "attention_mask": [1] * len(seq),
+            "labels": ex["labels"]
+        }
 
     def _pack_xfer_cross(self, ex):
         ids_utt  = self.tok(ex["utterance"], add_special_tokens=False)["input_ids"]
@@ -612,8 +688,12 @@ class DataHandler:
         seg = [0] * (len(ids_utt) + len(ids_tgt) + 3) + [1] * (len(seq) - len(ids_utt) - len(ids_tgt) - 3)
         ctx = [ex["ctx_feat"]] * len(seq)
 
-        return {"input_ids": seq,
-                "token_type_ids": seg,
-                "context_ids": ctx,
-                "attention_mask": [1] * len(seq),
-                "labels": ex["labels"]}
+        return {
+            "dlg_id": ex["dlg_id"],
+            "turn_idx": ex["turn_idx"],
+            "input_ids": seq,
+            "token_type_ids": seg,
+            "context_ids": ctx,
+            "attention_mask": [1] * len(seq),
+            "labels": ex["labels"]
+        }

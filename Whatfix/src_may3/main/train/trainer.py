@@ -65,10 +65,13 @@ def train_helper(module: ModuleType, data_config: DataConfig, model_config: Mode
         num_train_epochs=training_config.max_n_epochs,
         eval_strategy=training_config.eval_strategy,
         save_strategy=training_config.save_strategy,
+        eval_steps=training_config.eval_steps,
+        save_steps=training_config.save_steps,
         logging_steps=training_config.logging_steps,
         fp16=torch.cuda.is_available(),
-        load_best_model_at_end=True,
-        seed=training_config.seed)
+        load_best_model_at_end=False,
+        seed=training_config.seed,
+        save_safetensors=False)
     log(f"Time taken for defining training args: {time.time() - start_module}")
     log("-" * 100)
     

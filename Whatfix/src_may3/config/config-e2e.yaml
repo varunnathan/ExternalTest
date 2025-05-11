@@ -32,11 +32,21 @@ training_config:
     requested_slot_prediction: ckpt_req_slot
     in_domain_slot_prediction: ckpt_in_dom_slot
     cross_domain_slot_prediction: ckpt_cross_dom_slot
-  eval_strategy: epoch
-  save_strategy: epoch
+  eval_strategy: "no"
+  save_strategy: steps
+  eval_steps: 150
+  save_steps: 150
   logging_steps: 50
   learning_rate: 2e-05
   per_device_train_batch_size: 1
   per_device_eval_batch_size: 1
   seed: 101
   max_n_epochs: 1
+
+inference_config:
+  prob_threshold:
+    categorical_slot_prediction: 0.8
+    free_form_slot_prediction: 0.5
+    requested_slot_prediction: 0.9
+    in_domain_slot_prediction: 0.85
+    cross_domain_slot_prediction: 0.9

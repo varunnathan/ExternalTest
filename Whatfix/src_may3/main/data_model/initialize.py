@@ -8,6 +8,8 @@ class PathConfig(BaseModel):
     ROOT_DIR: Path
     RAW_DATA_DIR: Path
     PREPARED_DATA_DIR: Path
+    PREDICTION_DIR: Path
+    DLG_LEVEL_PREDICTION_DIR: Path
 
     @validator("*", pre=True)
     def create_dir(cls, v):
@@ -27,9 +29,12 @@ def initialize_paths():
     root_dir = PROJECT_ROOT_DIR.parent.parent.parent.parent
     raw_data_dir = root_dir / "dstc8-schema-guided-dialogue"
     prepared_data_dir = raw_data_dir / "sgd_supervision"
-
+    prediction_dir = raw_data_dir / "predictions"
+    dlg_level_prediction_dir = raw_data_dir / "dlg_level_predictions"
     return PathConfig(
         ROOT_DIR=root_dir,
         RAW_DATA_DIR=raw_data_dir,
-        PREPARED_DATA_DIR=prepared_data_dir
+        PREPARED_DATA_DIR=prepared_data_dir,
+        PREDICTION_DIR=prediction_dir,
+        DLG_LEVEL_PREDICTION_DIR=dlg_level_prediction_dir
     )

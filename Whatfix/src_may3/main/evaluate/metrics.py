@@ -42,10 +42,6 @@ single dialogue. The following metrics are defined:
   submissions. More details to follow with the evaluation script.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import collections
 from fuzzywuzzy import fuzz
 import numpy as np

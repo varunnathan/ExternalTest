@@ -36,6 +36,8 @@ class TrainingConfig(RootConfig):
     output_dir: typing.Dict[str, str]
     eval_strategy: str
     save_strategy: str
+    eval_steps: int
+    save_steps: int
     logging_steps: int
     learning_rate: float
     per_device_train_batch_size: int
@@ -44,11 +46,15 @@ class TrainingConfig(RootConfig):
     max_n_epochs: int
 
 
+class InferenceConfig(RootConfig):
+    prob_threshold: typing.Dict[str, float]
+
+
 class ServiceConfig(RootConfig):
     base_model_config: ModelConfig
     data_config: DataConfig
     training_config: TrainingConfig
-
+    inference_config: InferenceConfig
 
 def load_service_config(path=None) -> typing.Tuple[ServiceConfig, ServiceSettings]:
     global service_config_object, service_settings_object
